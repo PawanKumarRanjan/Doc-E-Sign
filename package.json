@@ -18,6 +18,9 @@
     "@angular/platform-browser": "^18.2.0",
     "@angular/platform-browser-dynamic": "^18.2.0",
     "@angular/router": "^18.2.0",
+    "ng2-pdf-viewer": "^10.4.0",
+    "ngx-signaturepad": "^0.0.10",
+    "pdf-lib": "^1.17.1",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
     "zone.js": "~0.14.10"
@@ -27,6 +30,7 @@
     "@angular/cli": "^18.2.11",
     "@angular/compiler-cli": "^18.2.0",
     "@types/jasmine": "~5.1.0",
+    "@types/signature_pad": "^2.3.6",
     "jasmine-core": "~5.2.0",
     "karma": "~6.4.0",
     "karma-chrome-launcher": "~3.2.0",
