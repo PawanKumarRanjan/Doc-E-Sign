@@ -22,6 +22,7 @@ export class AppComponent implements AfterViewInit {
   signatureWidth: number = 100;
   signatureHeight: number = 50;
   signatureFinalized = false;
+  uploadedFileName: string = "";
 
   @ViewChild('signaturePadElement') signaturePadElement!: ElementRef<HTMLCanvasElement>;
   signaturePad!: SignaturePad;
@@ -55,6 +56,8 @@ export class AppComponent implements AfterViewInit {
 
     if (input.files && input.files.length > 0) {
       const file = input.files[0];
+
+      this.uploadedFileName = file.name.replace(/\.[^/.]+$/, '') + '_signed.pdf';
 
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -137,11 +140,9 @@ export class AppComponent implements AfterViewInit {
       const signatureHeight = pngImage.height / 2;
 
       // Correctly position the signature considering the PDF's coordinate system
-      // Get the scale factor for the PDF container
       const pdfContainer = document.querySelector('.pdf-container') as HTMLElement;
       const pdfScale = pdfContainer.getBoundingClientRect().width / pageWidth;
 
-      // Use current position of signature relative to pdf container
       if (!this.signatureWrapper?.nativeElement) {
         console.error('Signature wrapper element not found during download.');
         return;
@@ -150,8 +151,7 @@ export class AppComponent implements AfterViewInit {
       const containerRect = pdfContainer.getBoundingClientRect();
 
       const signatureX = (signatureRect.left - containerRect.left) / pdfScale;
-      const signatureY = (pageHeight - ((signatureRect.top - containerRect.top) / pdfScale) - signatureHeight);
-
+      const signatureY = pageHeight - (signatureRect.top - containerRect.top) / pdfScale - signatureHeight;
 
       // Draw the image at the desired position
       page.drawImage(pngImage, {
@@ -168,7 +168,7 @@ export class AppComponent implements AfterViewInit {
       // Create a link to download the PDF
       const downloadLink = document.createElement('a');
       downloadLink.href = URL.createObjectURL(pdfBlob);
-      downloadLink.download = 'signed-document.pdf';
+      downloadLink.download = this.uploadedFileName; // Use the dynamically generated name
       downloadLink.click();
       this.signatureDataURL = undefined;
     } catch (error) {
@@ -277,10 +277,10 @@ export class AppComponent implements AfterViewInit {
     document.removeEventListener('mousemove', this.resize.bind(this));
     document.removeEventListener('mouseup', this.stopResize.bind(this));
   }
-    finalizeSignature(): void {
-      if (!this.signatureWrapper) return;
-      this.signatureSelected = false;
-      this.signatureFinalized = true;
-  
-    }
+  finalizeSignature(): void {
+    if (!this.signatureWrapper) return;
+    this.signatureSelected = false;
+    this.signatureFinalized = true;
+
+  }
 }
