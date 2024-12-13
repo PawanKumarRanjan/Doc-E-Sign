@@ -1,5 +1,5 @@
 // Import Component, ViewChild, and necessary libraries
-import { Component, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
+import { Component, ViewChild, ElementRef, AfterViewInit, HostListener } from '@angular/core';
 import SignaturePad from 'signature_pad';
 import { PDFDocument } from 'pdf-lib';
 
@@ -21,12 +21,14 @@ export class AppComponent implements AfterViewInit {
   resizeStart = { x: 0, y: 0, width: 0, height: 0 };
   signatureWidth: number = 100;
   signatureHeight: number = 50;
+  signatureFinalized = false;
 
   @ViewChild('signaturePadElement') signaturePadElement!: ElementRef<HTMLCanvasElement>;
   signaturePad!: SignaturePad;
 
   @ViewChild('signatureImage') signatureImage!: ElementRef<HTMLImageElement>;
   @ViewChild('signatureWrapper') signatureWrapper!: ElementRef<HTMLDivElement>;
+
 
   signaturePadOptions: Object = {
     minWidth: 0.5,
@@ -39,6 +41,14 @@ export class AppComponent implements AfterViewInit {
     this.pdfContainerElement = document.querySelector('.pdf-container');
   }
 
+  @HostListener('document:mousedown', ['$event'])
+  onDocumentClick(event: MouseEvent) {
+    if (this.signatureDataURL && this.signatureSelected && this.signatureWrapper) {
+      if (!this.signatureWrapper.nativeElement.contains(event.target as Node)) {
+        this.finalizeSignature();
+      }
+    }
+  }
 
   onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
@@ -93,6 +103,7 @@ export class AppComponent implements AfterViewInit {
   showSignatureOnPdf(): void {
     if (!this.signatureDataURL) return;
     this.signatureSelected = true;
+    this.signatureFinalized = false; // Reset the finalized flag
     setTimeout(() => {
       this.signaturePosition = { x: 100, y: 100 };
       if (this.signatureImage) {
@@ -159,6 +170,7 @@ export class AppComponent implements AfterViewInit {
       downloadLink.href = URL.createObjectURL(pdfBlob);
       downloadLink.download = 'signed-document.pdf';
       downloadLink.click();
+      this.signatureDataURL = undefined;
     } catch (error) {
       console.error('Error while downloading the PDF:', error);
     }
@@ -220,7 +232,6 @@ export class AppComponent implements AfterViewInit {
 
   }
 
-
   resize(event: MouseEvent): void {
     if (!this.resizeMode || !this.signatureWrapper) return;
     const deltaX = event.clientX - this.resizeStart.x;
@@ -250,9 +261,7 @@ export class AppComponent implements AfterViewInit {
       case 'bottom-right':
         newWidth = this.resizeStart.width + deltaX;
         newHeight = this.resizeStart.height + deltaY;
-
         break;
-
     }
 
     this.signatureWidth = newWidth;
@@ -268,4 +277,10 @@ export class AppComponent implements AfterViewInit {
     document.removeEventListener('mousemove', this.resize.bind(this));
     document.removeEventListener('mouseup', this.stopResize.bind(this));
   }
+    finalizeSignature(): void {
+      if (!this.signatureWrapper) return;
+      this.signatureSelected = false;
+      this.signatureFinalized = true;
+  
+    }
 }
