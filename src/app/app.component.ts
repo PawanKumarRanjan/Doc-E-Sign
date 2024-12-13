@@ -16,10 +16,17 @@ export class AppComponent implements AfterViewInit {
   isDragging = false;
   dragOffset = { x: 0, y: 0 };
   pdfContainerElement!: HTMLElement | null;
+  signatureSelected = false;
+  resizeMode: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | null = null;
+  resizeStart = { x: 0, y: 0, width: 0, height: 0 };
+  signatureWidth: number = 100;
+  signatureHeight: number = 50;
+
   @ViewChild('signaturePadElement') signaturePadElement!: ElementRef<HTMLCanvasElement>;
   signaturePad!: SignaturePad;
 
   @ViewChild('signatureImage') signatureImage!: ElementRef<HTMLImageElement>;
+  @ViewChild('signatureWrapper') signatureWrapper!: ElementRef<HTMLDivElement>;
 
   signaturePadOptions: Object = {
     minWidth: 0.5,
@@ -85,54 +92,19 @@ export class AppComponent implements AfterViewInit {
   // Display the signature over the PDF as a draggable image
   showSignatureOnPdf(): void {
     if (!this.signatureDataURL) return;
-
+    this.signatureSelected = true;
     setTimeout(() => {
-      if (this.pdfContainerElement) {
-        const signatureImg = document.createElement('img');
-        signatureImg.src = this.signatureDataURL!;
-        signatureImg.style.position = 'absolute';
-        signatureImg.style.left = `${this.signaturePosition.x}px`;
-        signatureImg.style.top = `${this.signaturePosition.y}px`;
-        signatureImg.style.cursor = 'move';
-
-        signatureImg.id = 'signatureImage';
-        this.pdfContainerElement.appendChild(signatureImg);
-
-        // Make the signature draggable
-        this.enableDragFunctionality(signatureImg);
+      this.signaturePosition = { x: 100, y: 100 };
+      if (this.signatureImage) {
+        this.signatureWidth = this.signatureImage.nativeElement.naturalWidth / 2;
+        this.signatureHeight = this.signatureImage.nativeElement.naturalHeight / 2;
       }
+
     }, 0);
+
   }
 
-  enableDragFunctionality(signatureImg: HTMLElement): void {
-    let offsetX = 0, offsetY = 0;
 
-    const startDrag = (event: MouseEvent) => {
-      this.isDragging = true;
-      offsetX = event.clientX - signatureImg.offsetLeft;
-      offsetY = event.clientY - signatureImg.offsetTop;
-      document.body.style.cursor = 'grabbing';
-    };
-
-    const drag = (event: MouseEvent) => {
-      if (this.isDragging) {
-        signatureImg.style.left = `${event.clientX - offsetX}px`;
-        signatureImg.style.top = `${event.clientY - offsetY}px`;
-      }
-    };
-
-    const endDrag = () => {
-      this.isDragging = false;
-      document.body.style.cursor = 'default';
-      // Update signature position upon drag end
-      const rect = signatureImg.getBoundingClientRect();
-      this.signaturePosition = { x: rect.left, y: rect.top };
-    };
-
-    signatureImg.addEventListener('mousedown', startDrag);
-    document.addEventListener('mousemove', drag);
-    document.addEventListener('mouseup', endDrag);
-  }
   // Download the PDF with the finalized signature position
   async downloadPdf() {
     if (!this.signatureDataURL || !this.src) return;
@@ -159,16 +131,16 @@ export class AppComponent implements AfterViewInit {
       const pdfScale = pdfContainer.getBoundingClientRect().width / pageWidth;
 
       // Use current position of signature relative to pdf container
-      const signatureElement = document.getElementById('signatureImage') as HTMLElement;
-      if (!signatureElement) {
-        console.error('Signature image element not found during download.');
+      if (!this.signatureWrapper?.nativeElement) {
+        console.error('Signature wrapper element not found during download.');
         return;
       }
-      const signatureRect = signatureElement.getBoundingClientRect();
+      const signatureRect = this.signatureWrapper.nativeElement.getBoundingClientRect();
       const containerRect = pdfContainer.getBoundingClientRect();
 
       const signatureX = (signatureRect.left - containerRect.left) / pdfScale;
       const signatureY = (pageHeight - ((signatureRect.top - containerRect.top) / pdfScale) - signatureHeight);
+
 
       // Draw the image at the desired position
       page.drawImage(pngImage, {
@@ -194,10 +166,10 @@ export class AppComponent implements AfterViewInit {
 
   // Start dragging the signature
   startDrag(event: MouseEvent): void {
-    if (!this.signatureImage) return;
-
+    if (!this.signatureWrapper) return;
+    this.signatureSelected = true;
     this.isDragging = true;
-    const rect = this.signatureImage.nativeElement.getBoundingClientRect();
+    const rect = this.signatureWrapper.nativeElement.getBoundingClientRect();
 
     // Calculate the offset between the mouse and the image's position
     this.dragOffset.x = event.clientX - rect.left;
@@ -210,14 +182,16 @@ export class AppComponent implements AfterViewInit {
 
   // Handle dragging movement
   drag(event: MouseEvent): void {
-    if (!this.isDragging || !this.signatureImage) return;
+    if (!this.isDragging || !this.signatureWrapper) return;
 
     // Update signature position dynamically
     this.signaturePosition.x = event.clientX - this.dragOffset.x;
     this.signaturePosition.y = event.clientY - this.dragOffset.y;
-    this.signatureImage.nativeElement.style.left = `${this.signaturePosition.x}px`;
-    this.signatureImage.nativeElement.style.top = `${this.signaturePosition.y}px`;
+    this.signatureWrapper.nativeElement.style.left = `${this.signaturePosition.x}px`;
+    this.signatureWrapper.nativeElement.style.top = `${this.signaturePosition.y}px`;
+
   }
+
 
   // Stop dragging
   stopDrag(): void {
@@ -226,5 +200,72 @@ export class AppComponent implements AfterViewInit {
     // Remove listeners to prevent memory leaks
     document.removeEventListener('mousemove', this.drag.bind(this));
     document.removeEventListener('mouseup', this.stopDrag.bind(this));
+  }
+
+
+  deleteSignature(event: MouseEvent): void {
+    event.stopPropagation();
+    this.signatureDataURL = undefined;
+    this.signatureSelected = false;
+
+  }
+  startResize(event: MouseEvent, mode: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'): void {
+    if (!this.signatureWrapper) return;
+    event.stopPropagation();
+    this.resizeMode = mode;
+    const rect = this.signatureWrapper.nativeElement.getBoundingClientRect();
+    this.resizeStart = { x: event.clientX, y: event.clientY, width: rect.width, height: rect.height };
+    document.addEventListener('mousemove', this.resize.bind(this));
+    document.addEventListener('mouseup', this.stopResize.bind(this));
+
+  }
+
+
+  resize(event: MouseEvent): void {
+    if (!this.resizeMode || !this.signatureWrapper) return;
+    const deltaX = event.clientX - this.resizeStart.x;
+    const deltaY = event.clientY - this.resizeStart.y;
+    let newWidth = this.resizeStart.width;
+    let newHeight = this.resizeStart.height;
+    let newLeft = this.signaturePosition.x;
+    let newTop = this.signaturePosition.y;
+
+    switch (this.resizeMode) {
+      case 'top-left':
+        newWidth = this.resizeStart.width - deltaX;
+        newHeight = this.resizeStart.height - deltaY;
+        newLeft = this.signaturePosition.x + deltaX;
+        newTop = this.signaturePosition.y + deltaY
+        break;
+      case 'top-right':
+        newWidth = this.resizeStart.width + deltaX;
+        newHeight = this.resizeStart.height - deltaY;
+        newTop = this.signaturePosition.y + deltaY
+        break;
+      case 'bottom-left':
+        newWidth = this.resizeStart.width - deltaX;
+        newHeight = this.resizeStart.height + deltaY;
+        newLeft = this.signaturePosition.x + deltaX;
+        break;
+      case 'bottom-right':
+        newWidth = this.resizeStart.width + deltaX;
+        newHeight = this.resizeStart.height + deltaY;
+
+        break;
+
+    }
+
+    this.signatureWidth = newWidth;
+    this.signatureHeight = newHeight;
+    this.signaturePosition.x = newLeft;
+    this.signaturePosition.y = newTop;
+    this.signatureWrapper.nativeElement.style.left = `${newLeft}px`;
+    this.signatureWrapper.nativeElement.style.top = `${newTop}px`;
+
+  }
+  stopResize(): void {
+    this.resizeMode = null;
+    document.removeEventListener('mousemove', this.resize.bind(this));
+    document.removeEventListener('mouseup', this.stopResize.bind(this));
   }
 }

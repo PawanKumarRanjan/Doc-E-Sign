@@ -4,7 +4,11 @@
 <div class="file-input-container">
   <button (click)="fileInput.click()">Select PDF</button>
   <input type="file" #fileInput accept="application/pdf" (change)="onFileSelected($event)" />
-  <button (click)="openSignaturePad()">Sign Here</button>
+
+  <!-- "Sign Here" button only visible if a PDF is selected -->
+  <button *ngIf="src" (click)="openSignaturePad()">Sign Here</button>
+
+  <!-- "Download PDF" button only visible if a signature exists -->
   <button *ngIf="signatureDataURL" (click)="downloadPdf()">Download PDF</button>
 </div>
 
@@ -17,9 +21,16 @@
     </pdf-viewer>
 
     <!-- Signature Image Over the PDF -->
-    <img *ngIf="signatureDataURL" #signatureImage id="signatureImage" [src]="signatureDataURL"
-      [style.left.px]="signaturePosition.x" [style.top.px]="signaturePosition.y" class="signature-image"
-      (mousedown)="startDrag($event)" />
+    <div *ngIf="signatureDataURL" #signatureWrapper class="signature-wrapper" [class.selected]="signatureSelected"
+      [style.left.px]="signaturePosition.x" [style.top.px]="signaturePosition.y" (mousedown)="startDrag($event)">
+      <img #signatureImage id="signatureImage" [src]="signatureDataURL" class="signature-image"
+        [style.width.px]="signatureWidth" [style.height.px]="signatureHeight" />
+      <div class="handle top-left" (mousedown)="startResize($event, 'top-left')"></div>
+      <div class="handle top-right" (mousedown)="startResize($event, 'top-right')"></div>
+      <div class="handle bottom-left" (mousedown)="startResize($event, 'bottom-left')"></div>
+      <div class="handle bottom-right" (mousedown)="startResize($event, 'bottom-right')"></div>
+      <div class="delete-handle" (mousedown)="deleteSignature($event)">x</div>
+    </div>
   </div>
 </div>
 

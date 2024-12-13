@@ -43,9 +43,67 @@ h2 {
 }
 
 // Signature Image
-.signature-image {
+.signature-wrapper {
     position: absolute;
     cursor: move;
+
+    &.selected {
+        border: 2px dotted #007bff;
+    }
+}
+
+.signature-image {
+    display: block;
+}
+
+.handle {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    background-color: #007bff;
+    border: 1px solid white;
+    cursor: pointer;
+}
+
+.top-left {
+    top: -4px;
+    left: -4px;
+    cursor: nw-resize;
+}
+
+.top-right {
+    top: -4px;
+    right: -4px;
+    cursor: ne-resize;
+}
+
+.bottom-left {
+    bottom: -4px;
+    left: -4px;
+    cursor: sw-resize;
+}
+
+.bottom-right {
+    bottom: -4px;
+    right: -4px;
+    cursor: se-resize;
+}
+
+.delete-handle {
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    background-color: red;
+    color: white;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-size: 14px;
+    cursor: pointer;
+    border: 1px solid white;
 }
 
 // Signature Pad Modal
