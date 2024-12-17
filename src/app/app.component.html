@@ -2,52 +2,50 @@
 
 <!-- File input to choose a PDF -->
 <div class="file-input-container">
-    <button (click)="fileInput.click()">Select PDF</button>
-    <input type="file" #fileInput accept="application/pdf" (change)="onFileSelected($event)" />
+  <button (click)="fileInput.click()">Select PDF</button>
+  <input type="file" #fileInput accept="application/pdf" (change)="onFileSelected($event)" />
 
-    <!-- "Sign Here" button only visible if a PDF is selected -->
-    <button *ngIf="src" (click)="openSignaturePad()">Sign Here</button>
+  <!-- "Sign Here" button only visible if a PDF is selected -->
+  <button *ngIf="src" (click)="openSignaturePad()">Sign Here</button>
 
-    <!-- "Download PDF" button only visible if a signature exists -->
-    <button *ngIf="signatureDataURL" (click)="downloadPdf()">Download PDF</button>
+  <!-- "Download PDF" button only visible if a signature exists -->
+  <button *ngIf="signatureDataURL" (click)="downloadPdf()">Download PDF</button>
 </div>
 
 <!-- PDF Viewer -->
 <div id="outerContainer">
-    <div class="pdf-container" >
-      <pdf-viewer [src]="src" [rotation]="0" [original-size]="false" [show-all]="true" [fit-to-page]="false" [zoom]="1"
-        [zoom-scale]="'page-width'" [stick-to-page]="false" [render-text]="true" [external-link-target]="'blank'"
-        [autoresize]="true" [show-borders]="false">
-      </pdf-viewer>
+  <div class="pdf-container">
+    <pdf-viewer [src]="src" [rotation]="0" [original-size]="false" [show-all]="true" [fit-to-page]="false" [zoom]="1"
+      [zoom-scale]="'page-width'" [stick-to-page]="false" (pagechanging)="pagechanging($event)" [render-text]="true"
+      [external-link-target]="'blank'" [autoresize]="true" [show-borders]="false">
+    </pdf-viewer>
 
-        <!-- Signature Image Over the PDF -->
-        <div *ngIf="signatureDataURL" #signatureWrapper
-          class="signature-wrapper"
-          [class.selected]="signatureSelected"
-          [style.left.px]="signaturePosition.x" [style.top.px]="signaturePosition.y"
-            (mousedown)="startDrag($event)">
-            <img #signatureImage id="signatureImage" [src]="signatureDataURL" class="signature-image"
-                [style.width.px]="signatureWidth" [style.height.px]="signatureHeight" />
-                <div class="handle top-left" *ngIf="signatureSelected" (mousedown)="startResize($event, 'top-left')"></div>
-              <div class="handle top-right" *ngIf="signatureSelected" (mousedown)="startResize($event, 'top-right')"></div>
-              <div class="handle bottom-left" *ngIf="signatureSelected" (mousedown)="startResize($event, 'bottom-left')"></div>
-              <div class="handle bottom-right" *ngIf="signatureSelected" (mousedown)="startResize($event, 'bottom-right')"></div>
-              <div class="delete-handle" *ngIf="signatureSelected" (mousedown)="deleteSignature($event)">x</div>
-        </div>
-
+    <!-- Signature Image Over the PDF -->
+    <div *ngIf="signatureDataURL" #signatureWrapper class="signature-wrapper" [class.selected]="signatureSelected"
+      [style.left.px]="signaturePosition.x" [style.top.px]="signaturePosition.y" (mousedown)="startDrag($event)">
+      <img #signatureImage id="signatureImage" [src]="signatureDataURL" class="signature-image"
+        [style.width.px]="signatureWidth" [style.height.px]="signatureHeight" />
+      <div class="handle top-left" *ngIf="signatureSelected" (mousedown)="startResize($event, 'top-left')"></div>
+      <div class="handle top-right" *ngIf="signatureSelected" (mousedown)="startResize($event, 'top-right')"></div>
+      <div class="handle bottom-left" *ngIf="signatureSelected" (mousedown)="startResize($event, 'bottom-left')"></div>
+      <div class="handle bottom-right" *ngIf="signatureSelected" (mousedown)="startResize($event, 'bottom-right')">
+      </div>
+      <div class="delete-handle" *ngIf="signatureSelected" (mousedown)="deleteSignature($event)">x</div>
     </div>
+
+  </div>
 </div>
 
 
 <!-- Signature Pad Modal -->
 <div class="signature-pad-container" *ngIf="showSignaturePad">
-    <div class="signature-pad-modal">
-        <h3>Sign Here</h3>
-        <canvas #signaturePadElement></canvas>
-        <div class="signature-pad-buttons">
-            <button (click)="clearSignaturePad()">Clear</button>
-            <button (click)="saveSignature()">Done</button>
-            <button (click)="closeSignaturePad()">Close</button>
-        </div>
+  <div class="signature-pad-modal">
+    <h3>Sign Here</h3>
+    <canvas #signaturePadElement></canvas>
+    <div class="signature-pad-buttons">
+      <button (click)="clearSignaturePad()">Clear</button>
+      <button (click)="saveSignature()">Done</button>
+      <button (click)="closeSignaturePad()">Close</button>
     </div>
+  </div>
 </div>
