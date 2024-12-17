@@ -24,6 +24,8 @@ export class AppComponent implements AfterViewInit {
   uploadedFileName: string = "";
   pdfBlob: any;
   currentPage: number = 1;
+  finalSignature: boolean = false;
+  originalSrc: string | Uint8Array | undefined;
 
 
   @ViewChild('signaturePadElement') signaturePadElement!: ElementRef<HTMLCanvasElement>;
@@ -65,6 +67,7 @@ export class AppComponent implements AfterViewInit {
       reader.onload = (e) => {
         if (e.target?.result) {
           this.src = e.target.result as string;
+            this.originalSrc = e.target.result as string;
         }
       };
       reader.readAsDataURL(file);
@@ -119,6 +122,12 @@ export class AppComponent implements AfterViewInit {
     }, 0);
   }
 
+  // Hide the signature over the PDF
+  hideSignatureOnPdf(): void {
+    this.signatureDataURL = undefined; //clear signature data
+    this.signatureSelected = false; //hide the handles
+  }
+
 
   // Download the PDF with the finalized signature position
   async downloadPdf() {
@@ -128,7 +137,6 @@ export class AppComponent implements AfterViewInit {
       downloadLink.href = URL.createObjectURL(this.pdfBlob);
       downloadLink.download = this.uploadedFileName; // Use the dynamically generated name
       downloadLink.click();
-      this.signatureDataURL = undefined;
     } catch (error) {
       console.error('Error while downloading the PDF:', error);
     }
@@ -287,6 +295,18 @@ export class AppComponent implements AfterViewInit {
     // Save the modified PDF and create a Blob for downloading
     const pdfBytes = await pdfDoc.save();
     this.pdfBlob = new Blob([pdfBytes], { type: 'application/pdf' });
+    this.hideSignatureOnPdf();
+    this.finalSignature = true;
+    const reader = new FileReader();
+      reader.onload = (e) => {
+        if (e.target?.result) {
+          this.src = e.target.result as string;
+        }
+      };
+      reader.readAsDataURL(this.pdfBlob);
   }
-
+    removeSignature(){
+        this.src = this.originalSrc
+        this.finalSignature = false;
+    }
 }

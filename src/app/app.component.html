@@ -6,10 +6,12 @@
   <input type="file" #fileInput accept="application/pdf" (change)="onFileSelected($event)" />
 
   <!-- "Sign Here" button only visible if a PDF is selected -->
-  <button *ngIf="src" (click)="openSignaturePad()">Sign Here</button>
+  <button *ngIf="src" (click)="openSignaturePad()">Sign</button>
+
+  <button *ngIf="finalSignature" (click)="removeSignature()">Clear</button>
 
   <!-- "Download PDF" button only visible if a signature exists -->
-  <button *ngIf="signatureDataURL" (click)="downloadPdf()">Download PDF</button>
+  <button *ngIf="finalSignature" (click)="downloadPdf()">Download PDF</button>
 </div>
 
 <!-- PDF Viewer -->
