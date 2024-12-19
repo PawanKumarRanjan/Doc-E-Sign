@@ -26,7 +26,8 @@ export class AppComponent implements AfterViewInit {
   currentPage: number = 1;
   finalSignature: boolean = false;
   originalSrc: string | Uint8Array | undefined;
-
+  pdfPageWidth:number =0
+  pdfPageHeight:number =0
 
   @ViewChild('signaturePadElement') signaturePadElement!: ElementRef<HTMLCanvasElement>;
   signaturePad!: SignaturePad;
@@ -50,10 +51,13 @@ export class AppComponent implements AfterViewInit {
   onDocumentClick(event: MouseEvent) {
     if (this.signatureDataURL && this.signatureSelected && this.signatureWrapper) {
       if (!this.signatureWrapper.nativeElement.contains(event.target as Node)) {
-        this.finalizeSignature();
+        const pdfCoords = this.getSignaturePdfCoordinates();
+        if(pdfCoords) this.finalizeSignature(pdfCoords.x, pdfCoords.y); // <--- pass coordinates here
       }
+
     }
   }
+
 
   onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
@@ -243,56 +247,42 @@ export class AppComponent implements AfterViewInit {
   }
 
   pagechanging(e: any) {
-    this.currentPage = e.pageNumber; // the page variable
+    this.currentPage = e.pageNumber;
+    const pdfViewer = document.querySelector('pdf-viewer');
+          if (!pdfViewer) return;
+
+    // Retrieve the current pdf page, get it width and height and calculate the scale.
+    const pdfPage = pdfViewer.shadowRoot?.querySelector(".page") as HTMLElement
+    if(!pdfPage) return;
+
+      this.pdfPageWidth = pdfPage.offsetWidth;
+      this.pdfPageHeight = pdfPage.offsetHeight;
     console.log("page number", this.currentPage);
   }
 
 
-  async finalizeSignature() {
-    if (!this.signatureWrapper) return;
-    this.signatureSelected = false;
-    this.signatureFinalized = true;
+  async finalizeSignature(pdfX: number, pdfY: number) {
+      if (!this.signatureWrapper || !this.src) return;
+        this.signatureSelected = false;
+        this.signatureFinalized = true;
 
-    if (!this.signatureDataURL || !this.src) return;
+    if (!this.signatureDataURL) return;
 
     const pdfDoc = await PDFDocument.load(this.src as string);
-
-    // Embed the PNG signature image into the PDF
     const pngImage = await pdfDoc.embedPng(this.signatureDataURL);
-
-    // Get the current page of the PDF
     const page = pdfDoc.getPages()[this.currentPage - 1];
-    console.log("signature appending on page", page);
-    const pageWidth = page.getWidth();
-    const pageHeight = page.getHeight();
+
 
     // Scale the signature to a reasonable size (optional)
     const signatureWidth = pngImage.width / 2.5;
     const signatureHeight = pngImage.height / 2.5;
-
-    // Correctly position the signature considering the PDF's coordinate system
-    const pdfContainer = document.querySelector('.pdf-container') as HTMLElement;
-    const pdfScale = pdfContainer.getBoundingClientRect().width / pageWidth;
-
-    if (!this.signatureWrapper?.nativeElement) {
-      console.error('Signature wrapper element not found during download.');
-      return;
-    }
-    const signatureRect = this.signatureWrapper.nativeElement.getBoundingClientRect();
-    const containerRect = pdfContainer.getBoundingClientRect();
-
-    const signatureX = (signatureRect.left - containerRect.left) / pdfScale;
-    const signatureY = pageHeight - (signatureRect.top - containerRect.top) / pdfScale - signatureHeight;
-
-    // Draw the image at the desired position
     page.drawImage(pngImage, {
-      x: signatureX,
-      y: signatureY,
+      x: pdfX,
+      y: pdfY,
       width: signatureWidth,
       height: signatureHeight,
     });
 
-    // Save the modified PDF and create a Blob for downloading
     const pdfBytes = await pdfDoc.save();
     this.pdfBlob = new Blob([pdfBytes], { type: 'application/pdf' });
     this.hideSignatureOnPdf();
@@ -305,8 +295,43 @@ export class AppComponent implements AfterViewInit {
       };
       reader.readAsDataURL(this.pdfBlob);
   }
+
     removeSignature(){
         this.src = this.originalSrc
         this.finalSignature = false;
+    }
+
+
+      getSignaturePdfCoordinates() {
+
+        if (!this.signatureWrapper || !this.pdfContainerElement || !this.src) return;
+
+        const pdfContainerRect = this.pdfContainerElement.getBoundingClientRect();
+        console.log("pdfContainerRect", pdfContainerRect)
+        const signatureRect = this.signatureWrapper.nativeElement.getBoundingClientRect();
+        console.log("signatureRect", signatureRect)
+
+
+        const signatureXOnScreen = signatureRect.left - pdfContainerRect.left;
+        const signatureYOnScreen = signatureRect.top - pdfContainerRect.top;
+
+       const pdfViewer = document.querySelector('pdf-viewer');
+       if (!pdfViewer) return;
+
+       if(!this.pdfPageHeight || !this.pdfPageWidth) {
+             const pdfPage = pdfViewer.shadowRoot?.querySelector(".page") as HTMLElement;
+              if(pdfPage) {
+                  this.pdfPageWidth = pdfPage.offsetWidth;
+                  this.pdfPageHeight = pdfPage.offsetHeight;
+              }
+          }
+
+          const pdfScale = pdfContainerRect.width / this.pdfPageWidth;
+          const signatureXOnPdf = signatureXOnScreen / pdfScale;
+          const signatureYOnPdf = (this.pdfPageHeight - signatureYOnScreen/pdfScale) ;
+
+
+          return {x: signatureXOnPdf, y: signatureYOnPdf};
+
     }
 }
